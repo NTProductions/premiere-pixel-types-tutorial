@@ -1,0 +1,76 @@
+// http://colorizer.org/
+
+
+VUYA
+inP->red (is really Pb)
+inP->green (is really Y)
+inP->blue (is really alpha)
+inP->alpha (is really Pr)
+
+example | convertVUYAToRGB)
+	PF_Pixel_VUYA_32f convertedPixel;
+
+	convertedPixel.luma = inputPixel.green;
+	convertedPixel.Pb = inputPixel.red;
+	convertedPixel.Pr = inputPixel.alpha;
+	convertedPixel.alpha = inputPixel.blue;
+
+	PF_FpLong R = convertedPixel.luma + 1.403 * convertedPixel.Pr;
+	PF_FpLong G = convertedPixel.luma - 0.344 * convertedPixel.Pb - 0.714 * convertedPixel.Pr;
+	PF_FpLong B = convertedPixel.luma + 1.77 * convertedPixel.Pb;
+// now you can manipulate the r, g, and b values as you would with any algorithm
+
+// convert back from RGB to VUYA, recyling our convertedPixel variable
+		convertedPixel.luma = 0.299 * newR + 0.587 * newG + 0.114 * newB;
+		convertedPixel.Pb = (newB - convertedPixel.luma) * 0.565;
+		convertedPixel.Pr = (newR - convertedPixel.luma) * 0.713;
+		convertedPixel.alpha = 1.0;
+	
+
+BGRA
+inP->red (is really green)
+inP->green (is really red)
+inP->blue (is really alpha)
+inP->alpha (is really blue)
+
+example)
+	outP->red = colour.green;
+	outP->green = colour.red;
+	outP->blue = colour.alpha;
+	outP->alpha = colour.blue;
+
+
+
+static PF_Err
+IterateFloat(
+	PF_InData* in_data,
+	long				progress_base,
+	long				progress_final,
+	PF_EffectWorld* src,
+	void* refcon,
+	PF_Err(*pix_fn)(void* refcon, A_long x, A_long y, PF_PixelFloat* in, PF_PixelFloat* out),
+	PF_EffectWorld* dst)
+{
+	PF_Err	err = PF_Err_NONE;
+	char* localSrc, * localDst;
+	localSrc = reinterpret_cast<char*>(src->data);
+	localDst = reinterpret_cast<char*>(dst->data);
+
+	for (int y = progress_base; y < progress_final; y++)
+	{
+		for (int x = 0; x < src->width; x++)
+		{
+			pix_fn(refcon,
+				static_cast<A_long> (x),
+				static_cast<A_long> (y),
+				reinterpret_cast<PF_PixelFloat*>(localSrc),
+				reinterpret_cast<PF_PixelFloat*>(localDst));
+			localSrc += 16;
+			localDst += 16;
+		}
+		localSrc += (src->rowbytes - src->width * 16);
+		localDst += (dst->rowbytes - src->width * 16);
+	}
+
+	return err;
+}
